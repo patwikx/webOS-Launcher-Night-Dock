@@ -174,7 +174,7 @@ export function startNightDock(runtime) {
           el._artSignature=JSON.stringify([item.art,item.plate,item.styleId,item.cover]);
           if(tab===1)el.appendChild(text('span','nd-tile__status',''));
           bindPointer(el,function(){if(mode==='settings'&&!held){settingsZone='grid';gridIndex=Number(el.dataset.index);renderSettings(false);}});
-          el.onclick=function(){if(mode==='settings'){var position=Number(el.dataset.index);settingsZone='grid';if(held&&gridIndex!==position)moveHeld(position);gridIndex=position;settingsActivate();}};
+          el.onclick=function(){if(mode==='settings'){flushNavigation();var position=Number(el.dataset.index);settingsZone='grid';if(held&&gridIndex!==position)moveHeld(position);gridIndex=position;settingsActivate();}};
         }
         delete existing[item.id];
         if(el.dataset.index!==String(i))el.dataset.index=String(i);
@@ -250,7 +250,7 @@ export function startNightDock(runtime) {
   function moveHeld(to){
     var list=visible();to=clamp(to,0,list.length-1);var item=list[gridIndex];if(!item||to===gridIndex)return;
     order.splice(order.indexOf(item),1);var target=order.indexOf(list[to]);order.splice(to>gridIndex?target+1:target,0,item);
-    gridIndex=to;invalidateApps();buildSettings();renderSettings(true);
+    gridIndex=to;invalidateApps();queueNavigation();
   }
   function commitHeld(){
     var changed=JSON.stringify(order.map(function(app){return app.id;}))!==JSON.stringify(held.original);

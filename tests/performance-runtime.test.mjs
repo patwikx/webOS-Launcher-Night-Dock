@@ -36,7 +36,14 @@ try{
  const order=config.appIds.slice();document.getElementById('reorderButton').click();key('ArrowDown');const heldNode=document.querySelector('.nd-tile');key('Enter');
  assert(heldNode===document.querySelector('.nd-tile'),'Picking up an app reuses its grid');
  const beforeMoveSaves=saveCalls;
- key('ArrowRight');key('ArrowRight');
+ const oldReorderFocus=HTMLElement.prototype.focus;let reorderFocusCalls=0;
+ HTMLElement.prototype.focus=function(...args){reorderFocusCalls++;return oldReorderFocus.apply(this,args);};
+ try{
+  key('ArrowRight');key('ArrowRight');
+  assert(document.querySelector('.nd-tile')===heldNode&&reorderFocusCalls===0,'Held moves defer DOM updates until the next frame');
+  await paint();
+  assert(reorderFocusCalls<=1&&document.activeElement===heldNode,'Rapid held moves make at most one focus update and keep focus on the moved tile');
+ }finally{HTMLElement.prototype.focus=oldReorderFocus;}
  assert(document.querySelectorAll('.nd-tile')[2]===heldNode,'Reordering moves the existing tile instead of recreating it');
  assert(saveCalls===beforeMoveSaves&&JSON.stringify(config.appIds)===JSON.stringify(order),'Moving a held tile performs no preference writes');
  key('Unidentified',461);

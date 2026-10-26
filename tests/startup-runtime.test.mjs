@@ -1,5 +1,6 @@
 import {createAppDiscovery} from '../src/lib/apps';
 import {LUNA, STORAGE_KEY} from '../src/config/constants';
+import {scheduleIdleDiscovery} from '../src/lib/idleDiscovery';
 const passed=[];
 const assert=(value,name)=>{if(!value)throw new Error(name);passed.push(name);};
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
@@ -34,7 +35,41 @@ try{
  await fallback.complete();
  assert(calls.filter(call=>call.params.appId==='netflix').length===1,'Catalogue fallback does not recheck selected apps');
 
+ // Exercise optional discovery scheduling without wall-clock timing assumptions.
+ const native={set:window.setTimeout,clear:window.clearTimeout,idle:window.requestIdleCallback,cancelIdle:window.cancelIdleCallback};
+ const hiddenDescriptor=Object.getOwnPropertyDescriptor(document,'hidden');
+ let hidden=false,seq=0,runs=0,cancel;
+ const timers=new Map(),idleTasks=new Map();
+ try{
+  Object.defineProperty(document,'hidden',{configurable:true,get:()=>hidden});
+  window.setTimeout=callback=>{const id=++seq;timers.set(id,callback);return id;};
+  window.clearTimeout=id=>timers.delete(id);
+  window.requestIdleCallback=callback=>{const id=++seq;idleTasks.set(id,callback);return id;};
+  window.cancelIdleCallback=id=>idleTasks.delete(id);
+  const flush=tasks=>{const callbacks=[...tasks.values()];tasks.clear();callbacks.forEach(callback=>callback());};
+  cancel=scheduleIdleDiscovery(()=>runs++);
+  flush(timers);
+  assert(runs===0&&idleTasks.size===1,'Optional discovery waits for an idle callback after quiet input');
+  document.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowLeft'}));
+  assert(idleTasks.size===0&&timers.size===1,'Remote input cancels idle discovery and restarts the quiet period');
+  hidden=true;document.dispatchEvent(new Event('visibilitychange'));
+  assert(timers.size===0&&idleTasks.size===0,'Backgrounding cancels pending discovery work');
+  hidden=false;document.dispatchEvent(new Event('visibilitychange'));flush(timers);flush(idleTasks);
+  assert(runs===1,'Foregrounding resumes discovery exactly once');
+  document.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight'}));
+  assert(timers.size===0,'Completed discovery removes its input listeners');
+  cancel=scheduleIdleDiscovery(()=>runs++);flush(timers);cancel();flush(idleTasks);
+  assert(runs===1&&timers.size===0,'On-demand discovery cancels the scheduled duplicate');
+  window.requestIdleCallback=undefined;
+  cancel=scheduleIdleDiscovery(()=>runs++);flush(timers);
+  assert(runs===2,'Older engines run discovery after quiet input without requestIdleCallback');
+ }finally{
+  cancel?.();window.setTimeout=native.set;window.clearTimeout=native.clear;window.requestIdleCallback=native.idle;window.cancelIdleCallback=native.cancelIdle;
+  if(hiddenDescriptor)Object.defineProperty(document,'hidden',hiddenDescriptor);else delete document.hidden;
+ }
+
  // Boot the real entry point with input and time services deliberately stalled.
+ calls=[];
  localStorage.clear();localStorage.setItem(STORAGE_KEY,JSON.stringify({appIds:['netflix'],sourceIds:null,useHomebrew:false}));
  let releaseInputs,releaseTime;
  reply=(uri,params,respond)=>{
@@ -45,6 +80,7 @@ try{
  await import('../src/main.tsx');
  await until(()=>document.getElementById('bootStatus')?.hidden&&releaseInputs&&releaseTime);
  assert(document.querySelector('.app-chip[data-id="netflix"]'),'Home is usable before HDMI and clock-format services answer');
+ assert(!calls.some(call=>call.uri===LUNA.appLoadStatus&&!['netflix','com.webos.app.livetv'].includes(call.params.appId)),'Home starts without immediately querying the remaining app catalogue');
  document.getElementById('sourcesButton').click();
  releaseInputs();releaseTime();
  if(location.search.includes('fail-input')){
@@ -58,5 +94,8 @@ try{
  assert(true,'Late 12-hour preference updates the clock without reloading');
  document.dispatchEvent(new KeyboardEvent('keydown',{key:'Backspace',bubbles:true,cancelable:true}));
  assert(document.getElementById('sourcesMenu').hidden,'Home remains reachable after delayed or failed input discovery');
+ document.querySelector('[data-utility="1"]').click();
+ await until(()=>!document.getElementById('settingsPanel').hidden);
+ assert(calls.some(call=>call.uri===LUNA.appLoadStatus&&!['netflix','com.webos.app.livetv'].includes(call.params.appId)),'Opening Settings requests the remaining catalogue immediately');
  window.__startupTests={passed};
 }catch(error){window.__startupTests={passed,error:error.stack};throw error;}
