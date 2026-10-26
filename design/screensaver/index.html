@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Night Dock · Flip clock</title>
+<style>
+@font-face{font-family:NightDock;src:url('../../src/assets/inter-latin-wght.woff2') format('woff2');font-weight:100 900;font-display:swap}
+*{box-sizing:border-box}body{margin:0;background:var(--background,#0b0c10);color:var(--foreground,#ece7de);font-family:NightDock,Arial,sans-serif;-webkit-font-smoothing:antialiased}button{font:inherit;cursor:pointer}button:focus-visible{outline:2px solid #d8b796;outline-offset:4px}.preview{width:100%;max-width:1920px;margin:auto}.screen{position:relative;aspect-ratio:16/9;overflow:hidden;isolation:isolate;padding:16px;background:#101114;border-radius:var(--radius,16px);container-type:inline-size;color:#f0e9db}.surface{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 42%,#25262a 0%,#17181c 46%,#0c0d10 100%)}.assembly{position:absolute;left:50%;top:46%;width:86%;transform:translate(-50%,-50%)}.clock{display:flex;align-items:center;justify-content:center;gap:1.45cqw}.group{position:relative;display:flex;gap:.72cqw}.digit{position:relative;width:11.1cqw;height:15.2cqw;perspective:70cqw;border-radius:.72cqw;background:#151619;box-shadow:0 .35cqw .15cqw rgba(0,0,0,.5),0 1.8cqw 3.5cqw rgba(0,0,0,.24);font-size:12.3cqw;line-height:15.2cqw;font-weight:620;font-variant-numeric:tabular-nums;letter-spacing:-.055em}.digit::before,.digit::after{content:"";position:absolute;z-index:7;top:calc(50% - .48cqw);width:.28cqw;height:.96cqw;background:#0b0c0e;border-radius:.15cqw;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}.digit::before{left:-.12cqw}.digit::after{right:-.12cqw}.half{position:absolute;left:0;width:100%;height:50%;overflow:hidden;backface-visibility:hidden;-webkit-backface-visibility:hidden;transform-style:preserve-3d}.half span{display:block;position:absolute;left:-.18cqw;right:0;height:15.2cqw;line-height:15.2cqw;text-align:center}.top{top:0;border-radius:.72cqw .72cqw 0 0;background:linear-gradient(#333438,#2a2b2f);border-bottom:1px solid #141518;transform-origin:50% 100%}.top span{top:0;color:#ded8cd}.bottom{bottom:0;border-radius:0 0 .72cqw .72cqw;background:linear-gradient(#303135,#37383d);transform-origin:50% 0;box-shadow:inset 0 1px 0 rgba(255,255,255,.035)}.bottom span{top:-7.6cqw;color:#f0eade}.flap-top{z-index:5}.flap-bottom{z-index:6;transform:rotateX(90deg)}.digit.is-flipping .flap-top{animation:fold-up .25s cubic-bezier(.55,.06,.78,.45) forwards}.digit.is-flipping .flap-bottom{animation:fold-down .3s cubic-bezier(.18,.65,.3,1) .25s forwards}.seam{position:absolute;left:0;right:0;top:50%;height:1px;z-index:8;background:rgba(0,0,0,.7);pointer-events:none}.separator{display:flex;flex-direction:column;gap:2.1cqw;padding-bottom:.2cqw}.separator i{display:block;width:.55cqw;height:.55cqw;border-radius:50%;background:#b4ada0;box-shadow:0 1px 1px #000;opacity:.65}.group-label{position:absolute;top:calc(100% + 2.1cqw);left:0;right:0;text-align:center;font-size:clamp(11px,1cqw,19px);letter-spacing:.13em;font-weight:450;color:#8b8986}.second-group .half span{color:#c1b29e}.second-group .top{background:linear-gradient(#2d2c2d,#252426)}.second-group .bottom{background:linear-gradient(#2a292b,#302f31)}.period{position:absolute;left:0;top:-3.2cqw;font-size:clamp(11px,1.1cqw,21px);font-weight:450;letter-spacing:.09em;color:#aaa295}.period[hidden]{display:none}.date{position:absolute;left:0;right:0;bottom:15%;margin:0;text-align:center;font-size:clamp(12px,1.45cqw,28px);font-weight:350;letter-spacing:.012em;color:#b3ada3}.identity{position:absolute;top:9%;left:7%;margin:0;font-size:clamp(11px,1cqw,19px);font-weight:450;color:#99958e;letter-spacing:.035em}.wake-hint{position:absolute;right:7%;bottom:7%;margin:0;font-size:clamp(11px,.9cqw,17px);color:#929088;font-weight:350}.toolbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;padding:18px 0 8px;font-size:13px;line-height:1.5}.toolbar p{margin:0;color:var(--muted-foreground,#aaa59b)}.toolbar strong{display:block;color:var(--foreground,#ece7de);font-size:14px;font-weight:500}.controls{display:flex;flex-wrap:wrap;gap:8px}.control{background:transparent;color:var(--foreground,#ece7de);border:1px solid var(--border,#393a3d);border-radius:9px;padding:9px 13px;font-size:12px;min-height:36px}.control[aria-pressed=true]{background:var(--foreground,#ece7de);color:var(--background,#101114);border-color:transparent}.screen:fullscreen{width:100%;height:100%;border-radius:0;aspect-ratio:auto}.screen.warm .surface{background:radial-gradient(ellipse at 50% 42%,#2e2721 0%,#1c1917 46%,#100e0d 100%)}.screen.warm .top{background:linear-gradient(#3b342d,#302a25)}.screen.warm .bottom{background:linear-gradient(#362f29,#403830)}@keyframes fold-up{from{transform:rotateX(0)}to{transform:rotateX(-90deg)}}@keyframes fold-down{from{transform:rotateX(90deg)}to{transform:rotateX(0)}}@media(prefers-reduced-motion:reduce){.digit.is-flipping .flap-top{animation:none;transform:rotateX(-90deg)}.digit.is-flipping .flap-bottom{animation:none;transform:rotateX(0)}}@media(max-width:540px){.toolbar{gap:12px}.controls{width:100%}.group-label{letter-spacing:.04em}.wake-hint{font-size:11px}.date{bottom:13%}}
+</style>
+</head>
+<body>
+<main class="preview">
+<section class="screen" id="screen" role="img" aria-label="Night Dock flip clock preview">
+ <div class="surface"></div>
+ <div class="assembly">
+  <div class="clock" id="clock" aria-hidden="true">
+   <div class="group" id="hours"><span class="period" id="period">PM</span><span class="group-label">HOURS</span></div>
+   <div class="separator"><i></i><i></i></div>
+   <div class="group" id="minutes"><span class="group-label">MINUTES</span></div>
+   <div class="separator"><i></i><i></i></div>
+   <div class="group second-group" id="seconds"><span class="group-label">SECONDS</span></div>
+  </div>
+ </div>
+ <p class="date" id="date">Monday, 26 October</p>
+ <p class="wake-hint">Press any button to return</p>
+</section>
+<div class="toolbar">
+ <p><strong>Night Dock · Flip clock</strong><span id="status" role="status">Live time · Design preview · TV unchanged</span></p>
+ <div class="controls">
+  <button class="control" id="demo" type="button">Show rollover</button>
+  <button class="control" id="warm" type="button" aria-pressed="false">Warm finish</button>
+  <button class="control" id="format" type="button" aria-pressed="false">24-hour clock</button>
+  <button class="control" id="fullscreen" type="button">Full screen</button>
+ </div>
+</div>
+</main>
+<script>
+(function(){
+ 'use strict';
+ var screen=document.getElementById('screen'),period=document.getElementById('period'),status=document.getElementById('status'),use24=false,tickTimer=0,demoStarted=0,demoOrigin=0,digits=[];
+ var dateFormat=new Intl.DateTimeFormat('en-GB',{weekday:'long',day:'numeric',month:'long'});
+ function half(className,value){var el=document.createElement('div');el.className='half '+className;var span=document.createElement('span');span.textContent=value;el.appendChild(span);return el;}
+ function makeDigit(parent){
+  var el=document.createElement('div');el.className='digit';var top=half('top','0'),bottom=half('bottom','0'),front=half('top flap-top','0'),back=half('bottom flap-bottom','0'),seam=document.createElement('div');seam.className='seam';
+  el.appendChild(top);el.appendChild(bottom);el.appendChild(front);el.appendChild(back);el.appendChild(seam);parent.appendChild(el);
+  var digit={el:el,top:top.firstChild,bottom:bottom.firstChild,front:front.firstChild,back:back.firstChild,value:null,timer:0};digits.push(digit);return digit;
+ }
+ ['hours','minutes','seconds'].forEach(function(id){makeDigit(document.getElementById(id));makeDigit(document.getElementById(id));});
+ function settle(digit){clearTimeout(digit.timer);digit.timer=0;digit.el.classList.remove('is-flipping');digit.top.textContent=digit.value;digit.bottom.textContent=digit.value;digit.front.textContent=digit.value;digit.back.textContent=digit.value;}
+ function display(digit,value,animate){
+  if(digit.value===value)return;
+  var old=digit.value;settle(digit);digit.value=value;
+  if(!animate||old===null||matchMedia('(prefers-reduced-motion: reduce)').matches){settle(digit);return;}
+  digit.top.textContent=value;digit.bottom.textContent=old;digit.front.textContent=old;digit.back.textContent=value;
+  digit.el.classList.add('is-flipping');digit.timer=setTimeout(function(){settle(digit);},580);
+ }
+ function tick(animate){
+  clearTimeout(tickTimer);tickTimer=0;if(document.hidden)return;
+  var now=new Date(),shown=now;
+  if(demoStarted){
+   var elapsed=Date.now()-demoStarted;
+   if(elapsed<6500){shown=new Date(demoOrigin+elapsed);}else{demoStarted=0;status.textContent='Live time · Design preview · TV unchanged';}
+  }
+  var hours=shown.getHours(),text=String(use24?hours:hours%12||12).padStart(2,'0')+String(shown.getMinutes()).padStart(2,'0')+String(shown.getSeconds()).padStart(2,'0');
+  digits.forEach(function(digit,i){display(digit,text[i],animate!==false);});
+  period.textContent=hours<12?'AM':'PM';period.hidden=use24;document.getElementById('date').textContent=dateFormat.format(shown);
+  screen.setAttribute('aria-label','Night Dock flip clock, '+(use24?String(hours):String(hours%12||12))+':'+text.slice(2,4)+':'+text.slice(4)+(use24?'':' '+period.textContent));
+  var boundary=demoStarted?Date.now()-demoStarted:Date.now();tickTimer=setTimeout(tick,1000-boundary%1000+8);
+ }
+ document.getElementById('format').onclick=function(){use24=!use24;this.setAttribute('aria-pressed',String(use24));tick(false);};
+ document.getElementById('warm').onclick=function(){this.setAttribute('aria-pressed',String(screen.classList.toggle('warm')));};
+ document.getElementById('demo').onclick=function(){var time=new Date();time.setHours(20,59,57,0);demoOrigin=time.getTime();demoStarted=Date.now();status.textContent='Rollover demo · 08:59:57 to 09:00:00';tick(false);};
+ document.getElementById('fullscreen').onclick=function(){if(screen.requestFullscreen)screen.requestFullscreen().catch(function(){status.textContent='Open the standalone HTML for full screen.';});};
+ document.addEventListener('visibilitychange',function(){clearTimeout(tickTimer);digits.forEach(settle);if(!document.hidden)tick(false);});
+ tick(false);
+})();
+</script>
+</body>
+</html>

@@ -1,3 +1,5 @@
+import {createFlipScreensaver} from './screensaver/flipClock.js';
+
 export function startNightDock(runtime) {
   'use strict';
   var apps = runtime.apps, inputs = runtime.inputs;
@@ -17,7 +19,7 @@ export function startNightDock(runtime) {
   var visibleCache=null, choicesVersion=0, dockDirty=true, appEls=[], sourceEls=[], homeBounds=null, homeScrollDestination=null, settingsBounds=null;
   var homeFocus=null, sourceFocus=null, settingsFocus=null, settingsHeld=null, settingsTabs=[], settingsTiles=[], settingsTileKind=null;
   var lastMode=null, settingsBuildKey=null, sourcesSignature=null, inputsVersion=0, settingsRequest=0;
-  var navigationFrame=0;
+  var navigationFrame=0,screensaver=null;
   function cancelNavigationFrame(){if(navigationFrame){cancelAnimationFrame(navigationFrame);navigationFrame=0;}}
   function paintNavigation(){
     navigationFrame=0;
@@ -64,6 +66,7 @@ export function startNightDock(runtime) {
   }
   function renderHome(focus){
     cancelNavigationFrame();
+    if(screensaver){screensaver.sync();if(screensaver.isActive())return;}
     var target=mode!=='home'?null:zone==='apps'?appEls[index]:utilityEls[utility];
     var rows=null,destination=null;
     // Read geometry before changing focus styles. Keep an in-flight scroll aimed at its latest row.
@@ -299,13 +302,15 @@ export function startNightDock(runtime) {
       return;
     }
     pendingLaunch=item.id;
+    if(screensaver)screensaver.sync();
     // Keep Home usable during the service call. Ignore callbacks from an older handoff.
     Promise.resolve().then(function(){return runtime.launch(item.id);}).then(function(){
-      if(request===launchRequest)pendingLaunch=null;
+      if(request===launchRequest){pendingLaunch=null;if(screensaver)screensaver.sync();}
     }).catch(function(){
       if(request!==launchRequest)return;
       pendingLaunch=null;
       showLaunchNotice("Couldn't open "+item.name+'. Try again or choose another app or source.');
+      if(screensaver)screensaver.sync();
     });
   }
   function activate(){if(zone==='apps')launch(visible()[index],'app');else if(utility===1)openSettings();else if(utility===2)openSources();else launch({id:'com.webos.app.home',name:'LG Home',art:'icon.png'},'app');}
@@ -344,7 +349,7 @@ export function startNightDock(runtime) {
   var dateFormatter=new Intl.DateTimeFormat('en-GB',{weekday:'long',day:'numeric',month:'long'});
   function updateClock(){
     clearTimeout(clockTimer);clockTimer=0;
-    if(document.hidden)return;
+    if(document.hidden||(screensaver&&screensaver.isActive()))return;
     var now=new Date(),minute=Math.floor(now.getTime()/60000);
     if(minute!==clockMinute){
       clockMinute=minute;
@@ -361,6 +366,11 @@ export function startNightDock(runtime) {
   function onForeground(){cancelNavigationFrame();pointerTarget=null;clearTimeout(enterTimer);enterTimer=0;launchRequest++;pendingLaunch=null;clearLaunchNotice();if(!document.hidden){if(mode==='home')renderHome(true);else if(mode==='settings'){buildSettings(true);renderSettings(true);}}updateClock();}
   document.addEventListener('visibilitychange',onForeground);document.addEventListener('webOSRelaunch',onForeground);
   buildDock();buildSources();if(!visible().length){zone='utilities';utility=1;}renderHome(true);updateClock();fit();$('bootStatus').hidden=true;
+  screensaver=createFlipScreensaver($('stage'),{
+    canStart:function(){return mode==='home'&&!pendingLaunch;},getTimeFormat:function(){return runtime.timeFormat;},
+    onShow:function(){cancelNavigationFrame();clearTimeout(clockTimer);clockTimer=0;clearLaunchNotice();},
+    onHide:function(){if(!document.hidden&&mode==='home')renderHome(true);updateClock();}
+  });
   return {
     refreshTimeFormat:function(format){runtime.timeFormat=format;clockMinute=-1;updateClock();},
     refreshInputs:function(next){inputs=next;buildSources();if(mode==='sources')renderSources(true);if(mode==='settings'&&tab===1){buildSettings();renderSettings(true);}},
