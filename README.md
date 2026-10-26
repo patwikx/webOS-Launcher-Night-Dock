@@ -4,13 +4,15 @@ A custom launcher for LG webOS TVs with a night-lake background, translucent gla
 
 The Night Dock design customization, implementation, optimization, and documentation were done by **GPT 6.1 Sol High**. The upstream launcher and third-party assets retain their original attribution.
 
-Version 1.1.7 was tested on an LG 55UT8050PSB running firmware 33.31.75 and webOS 10.3.2. The screenshots below are from the launcher running on the TV at 1920 × 1080.
+Version 1.1.8 was tested on an LG 55UT8050PSB running firmware 33.31.75 and webOS 10.3.2. The screenshots below are from the launcher running on the TV at 1920 × 1080.
 
 ## Home
 
 ![Night Dock Home screen with a night-lake wallpaper, clock, glass utility buttons, and app dock](docs/screenshots/home.png)
 
 Choose and arrange the apps on your dock. A cream focus background keeps selection clear, and YouTube adapts to a red icon with a white play symbol when focused. Home includes a 12/24-hour clock, Magic Remote pointer support, immediate focus feedback, and instant dock scrolling.
+
+Home also has a six-card flip-clock screensaver with live seconds. It appears after 30 seconds of inactivity on Home and follows the TV clock format. Remote or pointer input dismisses it without opening an app. It pauses in Settings, Sources and while the launcher is backgrounded. See [screensaver behavior](docs/SCREENSAVER.md).
 
 ## Settings
 
@@ -91,7 +93,7 @@ npm run build
 npm run package
 ```
 
-The package is written to `build/works.partridge.webos-launcher_1.1.7_all.ipk`. The existing app ID is retained for compatibility with saved preferences and Home-button mappings.
+The package is written to `build/works.partridge.webos-launcher_1.1.8_all.ipk`. The existing app ID is retained for compatibility with saved preferences and Home-button mappings.
 
 For a rooted TV, copy `tv.env.example` to the ignored `tv.env`, set `TV_HOST` to your SSH alias or TV address, and run:
 

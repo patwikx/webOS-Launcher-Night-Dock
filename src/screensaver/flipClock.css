@@ -1,0 +1,49 @@
+.nd-flip {
+  position:absolute; inset:0; z-index:30; overflow:hidden; isolation:isolate;
+  background:#101114; color:#f0e9db; cursor:none; outline:none;
+  font-family:var(--ui); -webkit-font-smoothing:antialiased;
+}
+.nd-flip[hidden] { display:none; }
+.stage.has-screensaver > :not(.nd-flip) { visibility:hidden; }
+.nd-flip__surface { position:absolute; inset:0; background:radial-gradient(ellipse at 50% 42%,#25262a 0%,#17181c 46%,#0c0d10 100%); }
+.nd-flip__assembly { position:absolute; left:50%; top:46%; width:86%; transform:translate(-50%,-50%); }
+.nd-flip__clock { display:flex; align-items:center; justify-content:center; gap:27.84px; }
+.nd-flip__group { position:relative; display:flex; gap:13.824px; }
+.nd-flip__digit {
+  position:relative; width:213.12px; height:291.84px; perspective:1344px; border-radius:13.824px;
+  background:#151619; box-shadow:0 6.72px 2.88px rgba(0,0,0,.5),0 34.56px 67.2px rgba(0,0,0,.24);
+  font-size:236.16px; line-height:291.84px; font-weight:620; font-variant-numeric:tabular-nums; letter-spacing:-.055em;
+}
+.nd-flip__digit::before,.nd-flip__digit::after {
+  content:""; position:absolute; z-index:7; top:calc(50% - 9.216px); width:5.376px; height:18.432px;
+  background:#0b0c0e; border-radius:2.88px; box-shadow:inset 0 1px 0 rgba(255,255,255,.06);
+}
+.nd-flip__digit::before { left:-2.304px; }
+.nd-flip__digit::after { right:-2.304px; }
+.nd-flip__half { position:absolute; left:0; width:100%; height:50%; overflow:hidden; backface-visibility:hidden; -webkit-backface-visibility:hidden; transform-style:preserve-3d; }
+.nd-flip__half span { display:block; position:absolute; left:-3.456px; right:0; height:291.84px; line-height:291.84px; text-align:center; }
+.nd-flip__top { top:0; border-radius:13.824px 13.824px 0 0; background:linear-gradient(#333438,#2a2b2f); border-bottom:1px solid #141518; transform-origin:50% 100%; }
+.nd-flip__top span { top:0; color:#ded8cd; }
+.nd-flip__bottom { bottom:0; border-radius:0 0 13.824px 13.824px; background:linear-gradient(#303135,#37383d); transform-origin:50% 0; box-shadow:inset 0 1px 0 rgba(255,255,255,.035); }
+.nd-flip__bottom span { top:-145.92px; color:#f0eade; }
+.nd-flip__front { z-index:5; }
+.nd-flip__back { z-index:6; transform:rotateX(90deg); }
+.nd-flip__digit.is-flipping .nd-flip__front { animation:nd-flip-up .25s cubic-bezier(.55,.06,.78,.45) forwards; }
+.nd-flip__digit.is-flipping .nd-flip__back { animation:nd-flip-down .3s cubic-bezier(.18,.65,.3,1) .25s forwards; }
+.nd-flip__seam { position:absolute; left:0; right:0; top:50%; height:1px; z-index:8; background:rgba(0,0,0,.7); pointer-events:none; }
+.nd-flip__separator { display:flex; flex-direction:column; gap:40.32px; padding-bottom:3.84px; }
+.nd-flip__separator i { display:block; width:10.56px; height:10.56px; border-radius:50%; background:#b4ada0; box-shadow:0 1px 1px #000; opacity:.65; }
+.nd-flip__label { position:absolute; top:calc(100% + 40.32px); left:0; right:0; text-align:center; font-size:19px; letter-spacing:.13em; font-weight:450; color:#8b8986; }
+.nd-flip__seconds .nd-flip__half span { color:#c1b29e; }
+.nd-flip__seconds .nd-flip__top { background:linear-gradient(#2d2c2d,#252426); }
+.nd-flip__seconds .nd-flip__bottom { background:linear-gradient(#2a292b,#302f31); }
+.nd-flip__period { position:absolute; left:0; top:-61.44px; font-size:21px; font-weight:450; letter-spacing:.09em; color:#aaa295; }
+.nd-flip__period[hidden] { display:none; }
+.nd-flip__date { position:absolute; left:0; right:0; bottom:15%; margin:0; text-align:center; font-size:27.84px; font-weight:350; letter-spacing:.012em; color:#b3ada3; }
+.nd-flip__hint { position:absolute; right:7%; bottom:7%; margin:0; font-size:17px; color:#929088; font-weight:350; }
+@keyframes nd-flip-up { from { transform:rotateX(0); } to { transform:rotateX(-90deg); } }
+@keyframes nd-flip-down { from { transform:rotateX(90deg); } to { transform:rotateX(0); } }
+@media (prefers-reduced-motion:reduce) {
+  .nd-flip__digit.is-flipping .nd-flip__front { animation:none; transform:rotateX(-90deg); }
+  .nd-flip__digit.is-flipping .nd-flip__back { animation:none; transform:rotateX(0); }
+}
