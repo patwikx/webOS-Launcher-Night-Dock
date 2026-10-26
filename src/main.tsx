@@ -6,7 +6,7 @@ import {listInputs, type InputSource} from './lib/inputs';
 import {isWebOS} from './lib/luna';
 import {launchApp} from './lib/launch';
 import {loadConfig, saveConfig} from './lib/storage';
-import {getTimeFormat} from './lib/timeFormat';
+import {getTimeFormat, DEFAULT_TIME_FORMAT} from './lib/timeFormat';
 import {hidePointerOnForeground} from './lib/pointer';
 import {appTile} from './lib/tiles';
 
@@ -27,12 +27,13 @@ const previewInputs: InputSource[] = [
 ];
 async function boot() {
  const discovery = createAppDiscovery(config.useHomebrew, config.appIds);
- let [result, inputs, timeFormat] = await Promise.all([discovery.home,isWebOS()?listInputs():Promise.resolve(previewInputs),getTimeFormat()]);
+ // Inputs and clock preferences must not hold the first usable Home frame hostage.
+ let result = await discovery.home;
  let completeDiscovery: Promise<void>;
  let finishDiscovery: () => Promise<void>;
  const runtime = {
-  appsReady:!isWebOS() || config.useHomebrew, ensureApps:() => finishDiscovery(),
-  apps:result.apps.map(appModel), inputs:inputs.map(inputModel), config, timeFormat, isTV:isWebOS(), launch:launchApp,
+  appsReady:!isWebOS(), ensureApps:() => finishDiscovery(),
+  apps:result.apps.map(appModel), inputs:isWebOS()?[]:previewInputs.map(inputModel), config, timeFormat:DEFAULT_TIME_FORMAT, isTV:isWebOS(), launch:launchApp,
   save(appIds: string[], sourceIds: string[]) {
    // Keep saved IDs for temporarily unavailable apps, so an update doesn't erase choices.
    const unavailable = config.appIds.filter(id=>!result.apps.some(a=>a.id===id));
@@ -47,7 +48,11 @@ async function boot() {
   dock.refreshApps(full.apps.map(appModel));
  }));
  // Let the first Home frame reach the compositor before discovering Settings apps.
- requestAnimationFrame(() => window.setTimeout(() => { void finishDiscovery().catch(() => {}); }, 0));
+ requestAnimationFrame(() => window.setTimeout(() => {
+  void finishDiscovery().catch(() => {});
+  refresh();
+  void getTimeFormat().then(format=>dock.refreshTimeFormat(format));
+ }, 0));
  let refreshing = false;
  const refresh = () => {
   if(document.hidden || !isWebOS() || refreshing) return;

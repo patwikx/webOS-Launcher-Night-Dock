@@ -15,7 +15,7 @@ export function startNightDock(runtime) {
   function clamp(n,min,max){return Math.max(min,Math.min(max,n));}
   function findApp(id){return apps.find(function(app){return app.id===id;});}
   var visibleCache=null, choicesVersion=0, dockDirty=true, appEls=[], sourceEls=[], homeBounds=null, homeScrollDestination=null, settingsBounds=null;
-  var homeFocus=null, sourceFocus=null, settingsFocus=null, settingsHeld=null, settingsTabs=[], settingsTiles=[];
+  var homeFocus=null, sourceFocus=null, settingsFocus=null, settingsHeld=null, settingsTabs=[], settingsTiles=[], settingsTileKind=null;
   var lastMode=null, settingsBuildKey=null, sourcesSignature=null, inputsVersion=0, settingsRequest=0;
   var navigationFrame=0;
   function cancelNavigationFrame(){if(navigationFrame){cancelAnimationFrame(navigationFrame);navigationFrame=0;}}
@@ -133,39 +133,71 @@ export function startNightDock(runtime) {
     var key=tab+':'+reordering+':'+(tab===0?choicesVersion:inputsVersion)+':'+runtime.config.useHomebrew;
     if(key===settingsBuildKey){if(!deferRender)renderSettings(false);return;}
     settingsBuildKey=key;
-    $('settingsTabs').innerHTML='';
-
-    ['Apps','Sources','Options'].forEach(function(label,i){
-      var el=button('nd-tab',label);el.textContent=label;el.setAttribute('role','tab');el.id='settingsTab'+i;
-      el.setAttribute('aria-controls','settingsGrid');el.setAttribute('aria-selected',String(tab===i));
-      el.classList.toggle('is-active',i===tab);el.disabled=reordering&&i!==tab;
-      bindPointer(el,function(){if(!reordering&&mode==='settings'){settingsZone='tabs';if(tab!==i){tab=i;gridIndex=0;buildSettings();}else renderSettings(false);}});
-      el.onclick=function(){if(!reordering){tab=i;gridIndex=0;settingsZone='tabs';buildSettings();}};
-      $('settingsTabs').appendChild(el);
-    });
-    setText($('settingsHint'),settingsHint());
-    $('reorderButton').hidden=tab!==0;$('reorderButton').textContent=reordering?'Done':'Re-order apps';
-    var grid=$('settingsGrid');grid.innerHTML='';grid.classList.toggle('nd-grid--options',tab===2);grid.setAttribute('aria-labelledby','settingsTab'+tab);
-    if(tab===2){
-      var option=button('nd-option','Live app list via Homebrew');option.setAttribute('role','switch');option.setAttribute('aria-checked',String(runtime.config.useHomebrew));
-      var copy=text('span','nd-option__copy','');copy.appendChild(text('span','nd-option__title','Live app list via Homebrew'));
-      copy.appendChild(text('span','nd-option__description','Discover installed apps through Homebrew Channel. Requires root access.'));
-      option.appendChild(copy);option.appendChild(text('span','nd-switch',runtime.config.useHomebrew?'On':'Off'));
-      option.onclick=runtime.toggleHomebrew;bindPointer(option,function(){settingsZone='grid';gridIndex=0;renderSettings(false);});grid.appendChild(option);
-    }else{
-      settingsItems().forEach(function(item,i){
-        var selected=tab===0&&shown[item.id];
-        var el=button('nd-tile'+(tab===1?' nd-tile--source':''),item.name);el.dataset.id=item.id;el.dataset.index=String(i);
-        if(tab===0&&!reordering){el.setAttribute('aria-pressed',String(selected));el.classList.toggle('is-hidden-app',!selected);}
-        el.appendChild(art(item,'nd-tile__art'));el.appendChild(text('span','nd-tile__name',item.name));
-        if(tab===0&&!reordering&&selected){var badge=text('span','nd-tile__check','');badge.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4 10-10"/></svg>';el.appendChild(badge);}
-        if(tab===1)el.appendChild(text('span','nd-tile__status',item.live?'TV tuner':item.connected?'Connected':'Not connected'));
-        bindPointer(el,function(){if(mode==='settings'&&!held){settingsZone='grid';gridIndex=i;renderSettings(false);}});
-        el.onclick=function(){if(mode==='settings'){settingsZone='grid';if(held&&gridIndex!==i)moveHeld(i);gridIndex=i;settingsActivate();}};
-        grid.appendChild(el);
+    if(!settingsTabs.length){
+      ['Apps','Sources','Options'].forEach(function(label,i){
+        var el=button('nd-tab',label);el.textContent=label;el.setAttribute('role','tab');el.id='settingsTab'+i;
+        el.setAttribute('aria-controls','settingsGrid');
+        bindPointer(el,function(){if(!reordering&&mode==='settings'){settingsZone='tabs';if(tab!==i){tab=i;gridIndex=0;buildSettings();}else renderSettings(false);}});
+        el.onclick=function(){if(!reordering){tab=i;gridIndex=0;settingsZone='tabs';buildSettings();}};
+        $('settingsTabs').appendChild(el);settingsTabs.push(el);
       });
     }
-    settingsTabs=Array.from($('settingsTabs').children);settingsTiles=Array.from(grid.children);settingsFocus=null;settingsHeld=null;settingsBounds=null;
+    settingsTabs.forEach(function(el,i){
+      var active=i===tab;
+      if(el.getAttribute('aria-selected')!==String(active))el.setAttribute('aria-selected',String(active));
+      if(el.classList.contains('is-active')!==active)el.classList.toggle('is-active',active);
+      el.disabled=reordering&&i!==tab;
+    });
+    setText($('settingsHint'),settingsHint());
+    $('reorderButton').hidden=tab!==0;setText($('reorderButton'),reordering?'Done':'Re-order apps');
+    var grid=$('settingsGrid');
+    if(settingsTileKind!==tab){grid.innerHTML='';settingsTileKind=tab;}
+    grid.classList.toggle('nd-grid--options',tab===2);grid.setAttribute('aria-labelledby','settingsTab'+tab);
+    if(tab===2){
+      if(!grid.firstChild){
+        var option=button('nd-option','Live app list via Homebrew');option.setAttribute('role','switch');
+        var copy=text('span','nd-option__copy','');copy.appendChild(text('span','nd-option__title','Live app list via Homebrew'));
+        copy.appendChild(text('span','nd-option__description','Discover installed apps through Homebrew Channel. Requires root access.'));
+        option.appendChild(copy);option.appendChild(text('span','nd-switch',''));
+        option.onclick=runtime.toggleHomebrew;bindPointer(option,function(){settingsZone='grid';gridIndex=0;renderSettings(false);});grid.appendChild(option);
+      }
+      grid.firstChild.setAttribute('aria-checked',String(runtime.config.useHomebrew));
+      setText(grid.querySelector('.nd-switch'),runtime.config.useHomebrew?'On':'Off');
+    }else{
+      var existing=Object.create(null);
+      Array.from(grid.children).forEach(function(el){existing[el.dataset.id]=el;});
+      settingsItems().forEach(function(item,i){
+        var el=existing[item.id];
+        if(!el){
+          el=button('nd-tile'+(tab===1?' nd-tile--source':''),item.name);el.dataset.id=item.id;
+          el.appendChild(art(item,'nd-tile__art'));el.appendChild(text('span','nd-tile__name',item.name));
+          el._artSignature=JSON.stringify([item.art,item.plate,item.styleId,item.cover]);
+          if(tab===1)el.appendChild(text('span','nd-tile__status',''));
+          bindPointer(el,function(){if(mode==='settings'&&!held){settingsZone='grid';gridIndex=Number(el.dataset.index);renderSettings(false);}});
+          el.onclick=function(){if(mode==='settings'){var position=Number(el.dataset.index);settingsZone='grid';if(held&&gridIndex!==position)moveHeld(position);gridIndex=position;settingsActivate();}};
+        }
+        delete existing[item.id];
+        if(el.dataset.index!==String(i))el.dataset.index=String(i);
+        if(el.getAttribute('aria-label')!==item.name)el.setAttribute('aria-label',item.name);
+        setText(el.querySelector('.nd-tile__name'),item.name);
+        var signature=JSON.stringify([item.art,item.plate,item.styleId,item.cover]);
+        if(el._artSignature!==signature){el.replaceChild(art(item,'nd-tile__art'),el.firstChild);el._artSignature=signature;}
+        if(tab===0){
+          var selected=!!shown[item.id],check=el.querySelector('.nd-tile__check');
+          if(!reordering){
+            if(el.getAttribute('aria-pressed')!==String(selected))el.setAttribute('aria-pressed',String(selected));
+          }else if(el.hasAttribute('aria-pressed'))el.removeAttribute('aria-pressed');
+          var hidden=!reordering&&!selected;
+          if(el.classList.contains('is-hidden-app')!==hidden)el.classList.toggle('is-hidden-app',hidden);
+          if(!reordering&&selected&&!check){var badge=text('span','nd-tile__check','');badge.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4 10-10"/></svg>';el.appendChild(badge);}
+          else if((reordering||!selected)&&check)check.remove();
+        }else setText(el.querySelector('.nd-tile__status'),item.live?'TV tuner':item.connected?'Connected':'Not connected');
+        // Move existing nodes rather than recreating their images and event handlers.
+        if(grid.children[i]!==el)grid.insertBefore(el,grid.children[i]||null);
+      });
+      Object.keys(existing).forEach(function(id){existing[id].remove();});
+    }
+    settingsTiles=Array.from(grid.children);settingsBounds=null;
     setText($('settingsCount'),tab===0?visible().length+' apps on Home':tab===1?inputs.length+' available sources':'Launcher options');
     if(!deferRender)renderSettings(false);
   }
@@ -212,15 +244,19 @@ export function startNightDock(runtime) {
   }
   function setReorder(){
     if(tab!==0)return;
-    if(held){held=null;}
+    if(held)commitHeld();
     reordering=!reordering;gridIndex=0;settingsZone='reorder';viewport.scrollTop=0;buildSettings();renderSettings(true);
   }
   function moveHeld(to){
     var list=visible();to=clamp(to,0,list.length-1);var item=list[gridIndex];if(!item||to===gridIndex)return;
     order.splice(order.indexOf(item),1);var target=order.indexOf(list[to]);order.splice(to>gridIndex?target+1:target,0,item);
-    gridIndex=to;invalidateApps();save();buildDock();buildSettings();renderSettings(true);
+    gridIndex=to;invalidateApps();buildSettings();renderSettings(true);
   }
-  function cancelHeld(){order=held.original.map(findApp).filter(Boolean);gridIndex=held.index;held=null;invalidateApps();save();buildDock();buildSettings();renderSettings(true);}
+  function commitHeld(){
+    var changed=JSON.stringify(order.map(function(app){return app.id;}))!==JSON.stringify(held.original);
+    held=null;if(changed)save();
+  }
+  function cancelHeld(){order=held.original.map(findApp).filter(Boolean);gridIndex=held.index;held=null;invalidateApps();buildSettings();renderSettings(true);}
   function settingsActivate(){
     if(settingsZone==='close'){closeSettings();return;}
     if(settingsZone==='tabs'){if(settingsItems().length||tab===2)settingsZone='grid';renderSettings(true);return;}
@@ -228,7 +264,7 @@ export function startNightDock(runtime) {
     if(tab===2){runtime.toggleHomebrew();return;}
     var item=settingsItems()[gridIndex];if(!item)return;
     if(tab===1){closeSettings();launch(item,'input');return;}
-    if(reordering){if(held)held=null;else held={original:order.map(function(app){return app.id;}),index:gridIndex};buildSettings();renderSettings(true);return;}
+    if(reordering){if(held)commitHeld();else held={original:order.map(function(app){return app.id;}),index:gridIndex};buildSettings();renderSettings(true);return;}
     shown[item.id]=!shown[item.id];invalidateApps();save();buildDock();buildSettings();renderSettings(true);
   }
   function settingsKey(key){
@@ -326,8 +362,10 @@ export function startNightDock(runtime) {
   document.addEventListener('visibilitychange',onForeground);document.addEventListener('webOSRelaunch',onForeground);
   buildDock();buildSources();if(!visible().length){zone='utilities';utility=1;}renderHome(true);updateClock();fit();$('bootStatus').hidden=true;
   return {
-    refreshInputs:function(next){inputs=next;buildSources();if(mode==='settings'&&tab===1)buildSettings();},
+    refreshTimeFormat:function(format){runtime.timeFormat=format;clockMinute=-1;updateClock();},
+    refreshInputs:function(next){inputs=next;buildSources();if(mode==='sources')renderSources(true);if(mode==='settings'&&tab===1){buildSettings();renderSettings(true);}},
     refreshApps:function(next){
+      if(held)cancelHeld();
       var previous=JSON.stringify(visible());
       apps=next;
       order=runtime.config.appIds.map(findApp).filter(Boolean);

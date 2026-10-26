@@ -61,9 +61,27 @@ export function createAppDiscovery (useHomebrew: boolean, selectedIds: readonly 
 	home: Promise<AppList>;
 	complete: () => Promise<AppList>;
 } {
-	if (useHomebrew || !isWebOS()) {
+	if (!isWebOS()) {
 		const home = listApps(useHomebrew);
 		return {home, complete: () => home};
+	}
+	if (useHomebrew) {
+		// Read metadata once, but only fetch selected icons on the Home critical path.
+		const points = listHomebrewPoints().catch(() => null);
+		const fallback = () => createAppDiscovery(false, selectedIds);
+		let catalog: ReturnType<typeof createAppDiscovery> | undefined;
+		const catalogDiscovery = () => catalog || (catalog = fallback());
+		const selected = new Set(selectedIds);
+		const home = points.then(points => points
+			? homebrewEntries(points.filter(point => selected.has(point.id)))
+			: catalogDiscovery().home);
+		let complete: Promise<AppList> | undefined;
+		return {
+			home,
+			complete: () => complete || (complete = home.then(() => points).then(points => points
+				? homebrewEntries(points)
+				: catalogDiscovery().complete()))
+		};
 	}
 	const selected = new Set(selectedIds);
 	const first = APP_CATALOG.filter((app) => selected.has(app.id));
@@ -102,23 +120,30 @@ function exec (command: string, timeoutMs = 8000): Promise<string> {
 	return lunaCall<ExecResponse>(LUNA.homebrewExec, {command}, timeoutMs).then((r) => r.stdoutString || '');
 }
 
-function listViaHomebrew (): Promise<AppEntry[]> {
+function listHomebrewPoints (): Promise<LaunchPoint[]> {
 	return exec("luna-send -n 1 luna://com.webos.applicationManager/listLaunchPoints '{}'")
 		.then((out) => {
 			const parsed = JSON.parse(out) as {launchPoints?: LaunchPoint[]};
 			const points = (parsed.launchPoints || []).filter((p) => p.id && p.title && HIDDEN_IDS.indexOf(p.id) === -1);
 			if (!points.length) throw new Error('no launch points');
-			return loadIcons(points).then((icons) => points.map((p) => {
-				const known = APP_CATALOG.find((c) => c.id === p.id);
-				return {
-					id: p.id,
-					// the catalogue's titles are shorter than LG's ("IPTV Player" vs "webOS IPTV Player")
-					title: known ? known.title : p.title,
-					iconUrl: icons[p.id] || (known && known.icon ? ICON_DIR + known.icon : undefined),
-					color: known && known.color
-				};
-			}));
+			return points;
 		});
+}
+
+function homebrewEntries (points: LaunchPoint[]): Promise<AppList> {
+	return loadIcons(points).then((icons) => ({source: 'homebrew', apps: points.map((p) => {
+		const known = APP_CATALOG.find((c) => c.id === p.id);
+		return {
+			id: p.id,
+			title: known ? known.title : p.title,
+			iconUrl: icons[p.id] || (known && known.icon ? ICON_DIR + known.icon : undefined),
+			color: known && known.color
+		};
+	})}));
+}
+
+function listViaHomebrew (): Promise<AppEntry[]> {
+	return listHomebrewPoints().then(homebrewEntries).then(result => result.apps);
 }
 
 /** Read the icons as data URIs in one shell round-trip, cached in localStorage by path.
