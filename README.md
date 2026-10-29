@@ -4,7 +4,7 @@ A custom launcher for LG webOS TVs with a night-lake background, translucent gla
 
 The Night Dock design customization, implementation, optimization, and documentation were done by **GPT 6.1 Sol High**. The upstream launcher and third-party assets retain their original attribution.
 
-Version 1.1.6 was tested on an LG 55UT8050PSB running firmware 33.31.75 and webOS 10.3.2. The screenshots below are from the launcher running on the TV at 1920 × 1080.
+Version 1.1.7 was tested on an LG 55UT8050PSB running firmware 33.31.75 and webOS 10.3.2. The screenshots below are from the launcher running on the TV at 1920 × 1080.
 
 ## Home
 
@@ -91,7 +91,7 @@ npm run build
 npm run package
 ```
 
-The package is written to `build/works.partridge.webos-launcher_1.1.6_all.ipk`. The existing app ID is retained for compatibility with saved preferences and Home-button mappings.
+The package is written to `build/works.partridge.webos-launcher_1.1.7_all.ipk`. The existing app ID is retained for compatibility with saved preferences and Home-button mappings.
 
 For a rooted TV, copy `tv.env.example` to the ignored `tv.env`, set `TV_HOST` to your SSH alias or TV address, and run:
 
@@ -105,7 +105,7 @@ Run `npm run dev` for a browser preview with sample apps. Real launching and inp
 
 ## Performance
 
-The glass panels and artwork are preserved. Version 1.1.6 removes Home focus animations and makes dock scrolling immediate. Earlier optimizations reduced JavaScript/CSS size by 20% and median warm reload time by about 26% in the measured TV workload. Version 1.1.4 combines rapid navigation paints and skips row-edge rendering. Version 1.1.5 preloads the wallpaper and font, and disables the webOS launch splash and spinner on the tested TV. See the [startup performance report](performance/REPORT.md) and [rapid navigation measurements](performance/RAPID-NAVIGATION.md) for results and limits. The [CPU, memory, and startup measurements](performance/RESOURCES.md) also cover navigation with a simulated CPU slowdown.
+The glass panels and artwork are preserved. Version 1.1.7 renders selected apps before input/clock responses, reuses Settings tiles, and batches held reorder updates. Remaining catalogue discovery waits for quiet input and idle time, or starts immediately when Settings is requested. Version 1.1.6 removes Home focus animations and makes dock scrolling immediate. Earlier optimizations reduced JavaScript/CSS size by 20% and median warm reload time by about 26% in the measured TV workload. Version 1.1.4 combines rapid navigation paints and skips row-edge rendering. Version 1.1.5 preloads the wallpaper and font, and disables the webOS launch splash and spinner on the tested TV. See the [startup performance report](performance/REPORT.md) and [rapid navigation measurements](performance/RAPID-NAVIGATION.md) for results and limits. The [CPU, memory, and startup measurements](performance/RESOURCES.md) also cover navigation with a simulated CPU slowdown. The [version 1.1.7 verification](performance/STAGED-STARTUP.md) records the deferred discovery and reorder behavior; its small TV sample did not demonstrate a startup-time improvement.
 
 The launcher can still be reclaimed under heavy memory pressure and need a fresh launch. The tested launch-time memory exemption reduced one reclaim path; it did not guarantee residency during 4K playback.
 

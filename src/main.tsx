@@ -6,9 +6,10 @@ import {listInputs, type InputSource} from './lib/inputs';
 import {isWebOS} from './lib/luna';
 import {launchApp} from './lib/launch';
 import {loadConfig, saveConfig} from './lib/storage';
-import {getTimeFormat} from './lib/timeFormat';
+import {getTimeFormat, DEFAULT_TIME_FORMAT} from './lib/timeFormat';
 import {hidePointerOnForeground} from './lib/pointer';
 import {appTile} from './lib/tiles';
+import {scheduleIdleDiscovery} from './lib/idleDiscovery';
 
 document.body.innerHTML = template;
 hidePointerOnForeground();
@@ -27,12 +28,14 @@ const previewInputs: InputSource[] = [
 ];
 async function boot() {
  const discovery = createAppDiscovery(config.useHomebrew, config.appIds);
- let [result, inputs, timeFormat] = await Promise.all([discovery.home,isWebOS()?listInputs():Promise.resolve(previewInputs),getTimeFormat()]);
+ // Inputs and clock preferences must not hold the first usable Home frame hostage.
+ let result = await discovery.home;
  let completeDiscovery: Promise<void>;
  let finishDiscovery: () => Promise<void>;
+ let cancelDeferredDiscovery = () => {};
  const runtime = {
-  appsReady:!isWebOS() || config.useHomebrew, ensureApps:() => finishDiscovery(),
-  apps:result.apps.map(appModel), inputs:inputs.map(inputModel), config, timeFormat, isTV:isWebOS(), launch:launchApp,
+  appsReady:!isWebOS(), ensureApps:() => finishDiscovery(),
+  apps:result.apps.map(appModel), inputs:isWebOS()?[]:previewInputs.map(inputModel), config, timeFormat:DEFAULT_TIME_FORMAT, isTV:isWebOS(), launch:launchApp,
   save(appIds: string[], sourceIds: string[]) {
    // Keep saved IDs for temporarily unavailable apps, so an update doesn't erase choices.
    const unavailable = config.appIds.filter(id=>!result.apps.some(a=>a.id===id));
@@ -41,13 +44,21 @@ async function boot() {
   toggleHomebrew() { config.useHomebrew=!config.useHomebrew; saveConfig(config); window.location.reload(); }
  };
  const dock = startNightDock(runtime);
- finishDiscovery = () => completeDiscovery || (completeDiscovery = discovery.complete().then((full) => {
-  result = full;
-  runtime.appsReady = true;
-  dock.refreshApps(full.apps.map(appModel));
- }));
- // Let the first Home frame reach the compositor before discovering Settings apps.
- requestAnimationFrame(() => window.setTimeout(() => { void finishDiscovery().catch(() => {}); }, 0));
+ finishDiscovery = () => {
+  cancelDeferredDiscovery();
+  return completeDiscovery || (completeDiscovery = discovery.complete().then((full) => {
+   result = full;
+   runtime.appsReady = true;
+   dock.refreshApps(full.apps.map(appModel));
+  }));
+ };
+ // Inputs and time follow the first Home frame; the remaining catalogue waits
+ // for quiet input and idle time, or an explicit Settings request.
+ requestAnimationFrame(() => window.setTimeout(() => {
+  if(!completeDiscovery) cancelDeferredDiscovery = scheduleIdleDiscovery(() => { void finishDiscovery().catch(() => {}); });
+  refresh();
+  void getTimeFormat().then(format=>dock.refreshTimeFormat(format));
+ }, 0));
  let refreshing = false;
  const refresh = () => {
   if(document.hidden || !isWebOS() || refreshing) return;
